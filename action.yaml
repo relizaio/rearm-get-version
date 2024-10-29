@@ -1,0 +1,121 @@
+name: 'Rearm get version'
+description: 'Get version for creating a new release on Rearm'
+branding:
+  icon: 'info'
+  color: 'green'
+inputs:
+  rearm_api_id:
+    description: "Rearm Hub API ID"
+    required: true
+  rearm_api_key:
+    description: "Rearm Hub API KEY"
+    required: true
+  rearm_api_url:
+    description: "Rearm Hub API URL"
+    required: false
+    default: 'https://dev.rearmhq.com'
+  path:
+    description: "Path to the relative to root of the repo (default is '.')"
+    required: false
+    default: .
+  ci_metadata:
+    description: "Metadata for CI run, (Optional - default is GitHub)"
+    required: false
+  rearm_project_id:
+    description: "Project UUID for this release if org-wide key is used"
+    required: false
+outputs:
+  rearm_full_version:
+    description: "Full Version"
+    value: ${{ steps.extract-version.outputs.rearm_full_version }}
+  rearm_short_version:
+    description: "Short Version"
+    value: ${{ steps.extract-version.outputs.rearm_short_version }}
+  rearm_build_start:
+    description: "Record build start time"
+    value: ${{ steps.rearm-build-start.outputs.rearm_build_start }}
+  rearm_do_build:
+    description: "Flag to control if build should continue"
+    value: ${{ steps.extract-commits.outputs.rearm_do_build }}
+  rearm_last_commit:
+    description: "Last recorded commit prior to this release"
+    value: ${{ steps.extract-commits.outputs.rearm_last_commit }}
+runs:
+  using: "composite"
+  steps:
+    - id: rearm-build-start 
+      name: Record build start 
+      run: echo "rearm_build_start=$(date -Iseconds)" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 200
+    - name: Extract Last Release Commit And Prepare List Of Commits
+      id: extract-commits
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        dobuild=false
+        echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > get_latest_release_cmd
+        if [ ! -z ${{inputs.rearm_project_id}} ]
+        then
+          echo " --project ${{inputs.rearm_project_id}} " >> get_latest_release_cmd
+        fi
+        
+        echo -n "rearm getlatestrelease $(cat get_latest_release_cmd) " >> get_latest_release_exec
+        latest_release=$(eval "$(cat get_latest_release_exec)")
+        echo "latest_release: $latest_release"
+        last_commit=$(echo $latest_release | jq -r ".sourceCodeEntryDetails.commit")
+        if [ ! -z "$last_commit" ] && [ "null" != "$last_commit" ]
+        then
+          echo -n "--commits $(git log $last_commit..${{github.sha}} --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0) " > get_version_command
+          difflines=$(git diff $last_commit..${{github.sha}} ./ | wc -l)
+          if [ "$difflines" != "0" ]
+          then
+            dobuild=true
+          fi
+        else
+          dobuild=true
+        fi
+        echo "DO_BUILD=$dobuild" >> $GITHUB_ENV
+        echo "LAST_COMMIT=$last_commit" >> $GITHUB_ENV
+        echo "rearm_do_build=$dobuild" >> $GITHUB_OUTPUT
+        echo "rearm_last_commit=$last_commit" >> $GITHUB_OUTPUT
+    - name: Get Version
+      if: ${{env.DO_BUILD == 'true'}}
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        echo -n "-k ${{ inputs.rearm_api_key }} -i ${{ inputs.rearm_api_id }} -u ${{ inputs.rearm_api_url }} \
+          -b ${{github.ref_name}} \
+          --commit ${{github.sha}} \
+          --commitmessage \"$(git log -1 --pretty='%s')\" \
+          --date $(git log -1 --date=iso-strict --pretty='%ad') \
+          --vcstype git --vcsuri github.com/${{github.repository}} " >> get_version_command
+        if [ "${{inputs.ci_metadata}}" != "" ]
+        then
+          echo " --metadata ${{inputs.ci_metadata}} " >> get_version_command
+        fi
+        if [ ! -z ${{inputs.rearm_project_id}} ]
+        then
+          echo " --project ${{inputs.rearm_project_id}} " >> get_version_command
+        fi
+        # debug
+        echo "$(cat get_version_command)"
+        # get version
+        echo -n "rearm getversion $(cat get_version_command) " >> get_version_exec
+        rearm_ver=$(eval "$(cat get_version_exec)")
+        echo "completed getting ver"
+        echo $rearm_ver
+        echo "RLZ_VER_JSON=$rearm_ver" >> $GITHUB_ENV
+    - id: extract-version
+      if: ${{env.DO_BUILD == 'true'}}
+      name: Extract Actual Version From JSON
+      shell: bash
+      run: |
+        full_ver=$(echo $RLZ_VER_JSON | jq -r ".version")
+        # version without meta for docker registry
+        short_ver=$(echo $RLZ_VER_JSON | jq -r ".dockerTagSafeVersion")
+        echo "rearm_full_version=$full_ver" >> $GITHUB_OUTPUT
+        echo "rearm_short_version=$short_ver" >> $GITHUB_OUTPUT
