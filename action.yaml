@@ -55,6 +55,8 @@ runs:
       id: extract-commits
       shell: bash
       run: |
+        set -e
+        set -x
         cd ${{ inputs.path }}
         dobuild=false
         echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > get_latest_release_cmd
