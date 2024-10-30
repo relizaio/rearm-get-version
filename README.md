@@ -1,7 +1,7 @@
 # `rearm-get-version`
 
 ## About
-This action uses the Rearm CLI, [`rearm`](https://github.com/rearmio/rearm), to get the version.
+This action uses the Rearm CLI, [`rearm`](https://github.com/relizaio/rearm), to get the version.
 
 ## Usage
 
@@ -9,7 +9,7 @@ Get the version info:
 
 ```yaml
 steps:
-- uses: rearmio/rearm-get-version@1.4
+- uses: relizaio/rearm-get-version@1.4
   with:
     rearm_api_id: <api-id-obtained-from-rearmhub>
     rearm_api_key: <api-key-obtained-from-rearmhub>

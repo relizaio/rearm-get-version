@@ -60,7 +60,7 @@ runs:
         echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > get_latest_release_cmd
         if [ ! -z ${{inputs.rearm_project_id}} ]
         then
-          echo " --project ${{inputs.rearm_project_id}} " >> get_latest_release_cmd
+          echo " --component ${{inputs.rearm_project_id}} " >> get_latest_release_cmd
         fi
         
         echo -n "rearm getlatestrelease $(cat get_latest_release_cmd) " >> get_latest_release_exec
@@ -99,7 +99,7 @@ runs:
         fi
         if [ ! -z ${{inputs.rearm_project_id}} ]
         then
-          echo " --project ${{inputs.rearm_project_id}} " >> get_version_command
+          echo " --component ${{inputs.rearm_project_id}} " >> get_version_command
         fi
         # debug
         echo "$(cat get_version_command)"
