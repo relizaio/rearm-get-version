@@ -18,11 +18,11 @@ steps:
 ## Inputs
 The actions supports the following inputs:
 
-- `rearm_api_id`: The project API ID obtained from Rearm.
-- `rearm_api_key`: The project API Key obtained from Rearm.
+- `rearm_api_id`: The component API ID obtained from Rearm.
+- `rearm_api_key`: The component API Key obtained from Rearm.
 - `ci_metadata`: Metadata for CI run (Optional)
 - `path`: Path to the relative to root of the repo (default is '.')
-- `rearm_project_id`: Project ID in Rearm Hub to obtain version for in case org-wide api key is used (Optional)
+- `rearm_component_id`: component ID in Rearm Hub to obtain version for in case org-wide api key is used (Optional)
 
 ## Outputs
 The actions produces the following outputs:

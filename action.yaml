@@ -21,8 +21,8 @@ inputs:
   ci_metadata:
     description: "Metadata for CI run, (Optional - default is GitHub)"
     required: false
-  rearm_project_id:
-    description: "Project UUID for this release if org-wide key is used"
+  rearm_component_id:
+    description: "Component UUID for this release if org-wide key is used"
     required: false
 outputs:
   rearm_full_version:
@@ -60,9 +60,9 @@ runs:
         cd ${{ inputs.path }}
         dobuild=false
         echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > get_latest_release_cmd
-        if [ ! -z ${{inputs.rearm_project_id}} ]
+        if [ ! -z ${{inputs.rearm_component_id}} ]
         then
-          echo " --component ${{inputs.rearm_project_id}} " >> get_latest_release_cmd
+          echo " --component ${{inputs.rearm_component_id}} " >> get_latest_release_cmd
         fi
         
         echo -n "rearm getlatestrelease $(cat get_latest_release_cmd) " >> get_latest_release_exec
@@ -99,9 +99,9 @@ runs:
         then
           echo " --metadata ${{inputs.ci_metadata}} " >> get_version_command
         fi
-        if [ ! -z ${{inputs.rearm_project_id}} ]
+        if [ ! -z ${{inputs.rearm_component_id}} ]
         then
-          echo " --component ${{inputs.rearm_project_id}} " >> get_version_command
+          echo " --component ${{inputs.rearm_component_id}} " >> get_version_command
         fi
         # debug
         echo "$(cat get_version_command)"
