@@ -57,21 +57,22 @@ runs:
       run: |
         set -e
         set -x
+        mkdir -p /tmp/reliza
         cd ${{ inputs.path }}
         dobuild=false
-        echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > get_latest_release_cmd
+        echo -n "-i ${{ inputs.rearm_api_id }} -k ${{ inputs.rearm_api_key }} -u ${{ inputs.rearm_api_url }} -b ${{github.ref_name}}"  > /tmp/reliza/get_latest_release_cmd
         if [ ! -z ${{inputs.rearm_component_id}} ]
         then
-          echo " --component ${{inputs.rearm_component_id}} " >> get_latest_release_cmd
+          echo " --component ${{inputs.rearm_component_id}} " >> /tmp/reliza/get_latest_release_cmd
         fi
         
-        echo -n "rearm getlatestrelease $(cat get_latest_release_cmd) " >> get_latest_release_exec
-        latest_release=$(eval "$(cat get_latest_release_exec)")
+        echo -n "rearm getlatestrelease $(cat /tmp/reliza/get_latest_release_cmd) " >> /tmp/reliza/get_latest_release_exec
+        latest_release=$(eval "$(cat /tmp/reliza/get_latest_release_exec)")
         echo "latest_release: $latest_release"
         last_commit=$(echo $latest_release | jq -r ".sourceCodeEntryDetails.commit")
         if [ ! -z "$last_commit" ] && [ "null" != "$last_commit" ]
         then
-          echo -n "--commits $(git log $last_commit..${{github.sha}} --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0) " > get_version_command
+          echo -n "--commits $(git log $last_commit..${{github.sha}} --date=iso-strict --pretty='%H|||%ad|||%s|||%an|||%ae' -- ./ | base64 -w 0) " > /tmp/reliza/get_version_command
           difflines=$(git diff $last_commit..${{github.sha}} ./ | wc -l)
           if [ "$difflines" != "0" ]
           then
@@ -94,20 +95,20 @@ runs:
           --commit ${{github.sha}} \
           --commitmessage \"$(git log -1 --pretty='%s')\" \
           --date $(git log -1 --date=iso-strict --pretty='%ad') \
-          --vcstype git --vcsuri github.com/${{github.repository}} " >> get_version_command
+          --vcstype git --vcsuri github.com/${{github.repository}} " >> /tmp/reliza/get_version_command
         if [ "${{inputs.ci_metadata}}" != "" ]
         then
-          echo " --metadata ${{inputs.ci_metadata}} " >> get_version_command
+          echo " --metadata ${{inputs.ci_metadata}} " >> /tmp/reliza/get_version_command
         fi
         if [ ! -z ${{inputs.rearm_component_id}} ]
         then
-          echo " --component ${{inputs.rearm_component_id}} " >> get_version_command
+          echo " --component ${{inputs.rearm_component_id}} " >> /tmp/reliza/get_version_command
         fi
         # debug
-        echo "$(cat get_version_command)"
+        echo "$(cat /tmp/reliza/get_version_command)"
         # get version
-        echo -n "rearm getversion $(cat get_version_command) " >> get_version_exec
-        rearm_ver=$(eval "$(cat get_version_exec)")
+        echo -n "rearm getversion $(cat /tmp/reliza/get_version_command) " >> /tmp/reliza/get_version_exec
+        rearm_ver=$(eval "$(cat /tmp/reliza/get_version_exec)")
         echo "completed getting ver"
         echo $rearm_ver
         echo "RLZ_VER_JSON=$rearm_ver" >> $GITHUB_ENV
@@ -121,3 +122,7 @@ runs:
         short_ver=$(echo $RLZ_VER_JSON | jq -r ".dockerTagSafeVersion")
         echo "rearm_full_version=$full_ver" >> $GITHUB_OUTPUT
         echo "rearm_short_version=$short_ver" >> $GITHUB_OUTPUT
+post:
+  shell: bash
+  run: |
+    rm -rf /tmp/reliza/*
